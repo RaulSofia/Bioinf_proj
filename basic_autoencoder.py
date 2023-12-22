@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.layers import Input, Dense, RepeatVector, LSTM, TimeDistributed, Flatten, Embedding
 from tensorflow.keras.models import Model
 
-EMBEDDING_DIM = 128
+ENCODING_DIM = 128
 
 def main():
     # Generate example data
@@ -27,9 +27,9 @@ def main():
     input_seq = Input(shape=(10, 1))
     # encoded = Embedding(10, EMBEDDING_DIM, input_length=10)(input_seq)
     encoded = LSTM(128, return_sequences=True, name="lstm_encoder")(input_seq)
-    encoded = TimeDistributed(Dense(EMBEDDING_DIM))(encoded)
+    encoded = TimeDistributed(Dense(ENCODING_DIM))(encoded)
     encoded = Flatten()(encoded)
-    encoded = Dense(EMBEDDING_DIM, name="encoder_output")(encoded)
+    encoded = Dense(ENCODING_DIM, name="encoder_output")(encoded)
 
     decoded = RepeatVector(10)(encoded)
 
