@@ -16,25 +16,37 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.layers import Input, Dense, RepeatVector, LSTM, TimeDistributed, Flatten, Embedding
 from tensorflow.keras.models import Model
 
+tf.config.set_visible_devices([], 'GPU')
+
 ENCODING_DIM = 128
+EMBEDDING_DIM = 128
+MAX_LEN = 100
+VOCAB_SIZE = 20
 
 def main():
     # Generate example data
-    data = np.random.random((1000, 10, 1))  # Replace this with your own data
+    data = np.random.randint(0, VOCAB_SIZE-1, size=(1000, MAX_LEN))  # Replace this with your own data
     print(data)
 
     # Define the model
-    input_seq = Input(shape=(10, 1))
-    # encoded = Embedding(10, EMBEDDING_DIM, input_length=10)(input_seq)
-    encoded = LSTM(128, return_sequences=True, name="lstm_encoder")(input_seq)
+    input_seq = Input(shape=(MAX_LEN,))
+    print("input_seq:", input_seq.shape)
+    encoded = Embedding(VOCAB_SIZE, EMBEDDING_DIM, input_length=MAX_LEN, mask_zero=True)(input_seq)
+    print("encoded_embedding:", encoded.shape)
+    encoded = LSTM(128, return_sequences=True, name="lstm_encoder")(encoded)
+    print("encoded_lstm:", encoded.shape)
     encoded = TimeDistributed(Dense(ENCODING_DIM))(encoded)
+    print("encoded_time_distributed:", encoded.shape)
     encoded = Flatten()(encoded)
+    print("encoded_flatten:", encoded.shape)
     encoded = Dense(ENCODING_DIM, name="encoder_output")(encoded)
+    print("encoded_dense:", encoded.shape)
 
-    decoded = RepeatVector(10)(encoded)
+    decoded = RepeatVector(MAX_LEN)(encoded)
 
     # Decoder layers
     decoded = LSTM(128, return_sequences=True, name="lstm_decoder")(decoded)
+    decoded = TimeDistributed(Dense(VOCAB_SIZE, activation='softmax'))(decoded)
 
     # Autoencoder model
     autoencoder = Model(input_seq, decoded)
