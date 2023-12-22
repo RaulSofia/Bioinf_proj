@@ -25,7 +25,7 @@ VOCAB_SIZE = 20
 
 def main():
     # Generate example data
-    data = np.random.randint(0, VOCAB_SIZE-1, size=(1000, MAX_LEN))  # Replace this with your own data
+    data = np.random.randint(0, VOCAB_SIZE-1, size=(1000, MAX_LEN, 1))  # Replace this with your own data
     print(data)
 
     # Define the model
