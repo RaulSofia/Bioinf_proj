@@ -1,0 +1,2 @@
+,model_name,encoder_freezed,start_freezed,batch_size,epochs,patience,optimizer,loss,reset_weights,dropout
+0,encoder_predictor_32,True,False,16,100,10,adam,mse,False,0.6
