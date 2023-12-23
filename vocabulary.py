@@ -1,7 +1,8 @@
 from rdkit import Chem
 import re
 import numpy as np
-import pandas as pd
+from mol_utils import split_molecule
+from methods import read_file
 
 
 class Vocabulary:
@@ -14,8 +15,11 @@ class Vocabulary:
             vocab = f.read().split()  # list
 
         # to_add_tokens = ['G', 'A', 'Z', '[Yb]', '[Lu]', '[Ta]', '[W]', '[Re]', '[Os]', '[Pt]', '[Ir]', '[Au]', '[TlH2]', '[PbH]']
-        to_add_tokens = ['A', 'G']
-        vocab = to_add_tokens + vocab
+        to_add_tokens = ['G', 'A']
+        vocab = vocab + to_add_tokens
+        # for token in to_add_tokens:
+        #     if token not in vocab:
+        #         vocab.append(token)
 
         # encode
         self.char_to_int = dict()
@@ -57,7 +61,7 @@ class Vocabulary:
                     for char in section:
                         unique_chars.add(char)
         # adding start 'GO', end 'EOS' and padding tokens
-        to_add_tokens = ['A', 'G']
+        to_add_tokens = ['G', 'A']#, 'Z', '[Yb]', '[Lu]', '[Ta]', '[W]', '[Re]', '[Os]', '[Pt]', '[Ir]', '[Au]', '[TlH2]', '[PbH]']
         for token in to_add_tokens:
             unique_chars.add(token)
 
@@ -101,6 +105,7 @@ class Vocabulary:
         for smile in smiles:
             regex = '(\[[^\[\]]{1,10}\])'
             # print(smile)
+            smile = self.frag_list_to_seq(smile)
             smile = smile.replace('Br', 'R').replace('Cl', 'L')
             smile_chars = re.split(regex, smile)
             smile_tok = []
@@ -113,15 +118,16 @@ class Vocabulary:
                         smile_tok.append(char)
 
             if pad_end:
-                assert len(smile_tok) <= self.max_len
-                    
+                smile_tok.append('A')
+                if len(smile_tok) > self.max_len:
+                    continue
 
                 # padding
-                if len(smile_tok) < self.max_len:
-                    dif = self.max_len - len(smile_tok)
+                if len(smile_tok) < self.max_len + 1:
+                    dif = self.max_len - len(smile_tok) + 1
                     [smile_tok.append('A') for _ in range(dif)]
 
-                # assert len(smile_tok) == self.max_len + 1
+                assert len(smile_tok) == self.max_len + 1
                 # print(smile_tok)
 
             list_tok_smiles.append(smile_tok)
@@ -200,13 +206,11 @@ class Vocabulary:
          '''
 
         # smiles_one_hot = []
-        print("SMILES", len(smiles_list))
         smiles_one_hot = np.zeros((len(smiles_list), self.max_len if pad_end else len(smiles_list[0]), self.vocab_size), dtype=np.int8)
         for j, smile in enumerate(smiles_list):
 
             # X = np.zeros((self.max_len, self.vocab_size), dtype=np.int8)
             for i, c in enumerate(smile):
-                # print(len(smile), i, c)
                 smiles_one_hot[j, i, self.char_to_int[c]] = 1
             # smiles_one_hot.append(X)
             # smiles_one_hot[j] = X
@@ -233,6 +237,54 @@ class Vocabulary:
             encoded_smiles.append(enc_smile)
         return encoded_smiles
 
+    def get_target(self, dataX, encode):
+        '''
+        Creates the target for the input dataX
+
+        Parameters
+        ----------
+        dataX : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        dataY : TYPE equals dataX but with each entry shifted 1 timestep and with an appended 'A' (padding)
+            DESCRIPTION.
+
+        '''
+        if encode == 'OHE':
+            dataY = np.zeros(shape=dataX.shape, dtype=np.int8)  # ohe
+            for i in range(dataX.shape[0]):
+                dataY[i, 0:-1, :] = dataX[i, 1:, :]
+                dataY[i, -1, self.char_to_int["A"]] = 1
+
+        elif encode == 'embedding':
+            dataY = [line[1:] for line in dataX]  # emb
+            for i in range(len(dataY)):
+                dataY[i].append(self.char_to_int['A'])
+
+        return dataY
+
+    def frag_list_to_seq(self, fragmented):
+        result = []
+        for frag in fragmented:
+            result.append('Z')
+            result.append(frag)
+        return ''.join(result)
+
+    def seq_to_frag_list(self, seq):
+        split = seq.split('Z')
+        split.remove('')
+        return split
+
     def load_dataset(self, path, samples):
-        df = pd.read_csv(path, nrows=samples)
-        return df['smiles'].tolist()
+        fragment_mols = read_file(path)
+        dataset = []
+        i, not_valid = 0, 0
+        while len(dataset) < samples:
+            try:
+                dataset.append([Chem.MolToSmiles(a) for a in split_molecule(fragment_mols[i])])
+            except:
+                not_valid += 1
+            i += 1
+        return dataset, (i-not_valid)/i
