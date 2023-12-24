@@ -1,0 +1,2 @@
+,model_name,encoder_freezed,start_freezed,batch_size,epochs,patience,optimizer,loss,reset_weights,dropout,dataset
+0,encoder_64.h5,False,False,16,100,10,adam,mse,False,0.4,data_clean_nosalt_canon_a2d.csv

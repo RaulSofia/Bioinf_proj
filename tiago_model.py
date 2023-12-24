@@ -69,8 +69,8 @@ def main():
     plt.scatter(preds, val_y)
     plt.show()
     preds = preds.reshape(-1)
-    preds = pd.DataFrame(preds, columns=["preds"])
-    preds.to_csv(f"runs/{run_name}/val_preds.csv", index=False)
+    preds_data = pd.DataFrame({"preds": preds, "y": val_y})
+    preds_data.to_csv(f"runs/{run_name}/val_preds.csv", index=False)
 
 
 if __name__ == "__main__":

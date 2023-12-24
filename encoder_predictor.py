@@ -16,7 +16,7 @@ from keras.callbacks import EarlyStopping, Callback
 # tf.config.set_visible_devices([], 'GPU')
 
 params = {
-    "model_name": "encoder_predictor_128_v3",
+    "model_name": "encoder_32.h5",
     "encoder_freezed": False,
     "start_freezed": False,
     "batch_size": 16,
@@ -24,8 +24,9 @@ params = {
     "patience": 10,
     "optimizer": 'adam',
     "loss": "mse",
-    "reset_weights": True,
-    "dropout": 0.6,
+    "reset_weights": False,
+    "dropout": 0.4,
+    "dataset": "data_clean_nosalt_canon_a2d.csv"
 }
 
 # assert params["encoder_freezed"] or params["start_freezed"], "Must freeze the encoder or start freezed"
@@ -52,7 +53,7 @@ def reset_weights(model):
 if __name__ == "__main__":
     run_name = str(10000000000 - round(time()))
     os.mkdir(f"runs/{run_name}")
-    encoder = load_model("encoder_128.h5")
+    encoder = load_model(params["model_name"])
     #freeze the encoder
     if params["encoder_freezed"] or params["start_freezed"]:
         encoder.trainable = False
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     encoded = Dense(1, activation='sigmoid')(encoded)
 
     #load data
-    data = pd.read_csv("./data_clean_nosalt_canon_a2d.csv")
+    data = pd.read_csv(f"./{params['dataset']}")
     data_y = data["pCHEMBL_norm"]
     data_x = data['SMILES']
     #remove salts
@@ -124,8 +125,9 @@ if __name__ == "__main__":
 
     val_preds = full_model.predict(val_x)
     val_preds = val_preds.reshape(-1)
-    val_preds = pd.DataFrame(val_preds)
-    val_preds.to_csv(f"runs/{run_name}/val_preds.csv")
+    print(val_preds.shape, val_y.shape) 
+    preds_data = pd.DataFrame({"preds": val_preds, "y": val_y})
+    preds_data.to_csv(f"runs/{run_name}/val_preds.csv")
     params_df = pd.DataFrame(params, index=[0])
     params_df.to_csv(f"runs/{run_name}/params.csv")
     plt.scatter(val_preds, val_y)
